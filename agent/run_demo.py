@@ -3,7 +3,7 @@ import importlib.util
 import copy
 
 from agent.agents.refund_agent import create_valid_refund
-from agent.audit.audit_ledger import append_audit_record
+from agent.agents.integration import record_agent_result
 
 from agent.scenarios.attacks.tampered_evidence import detect_tampered_evidence
 from agent.scenarios.attacks.replayed_action import detect_replayed_action
@@ -64,11 +64,11 @@ print(action_1)
 print("\nVerdict:")
 print(verdict_1)
 
-append_audit_record(
-    action_id=action_1["action_id"],
-    agent_id=action_1["agent_id"],
-    verdict=verdict_1
+record_agent_result(
+    action_1,
+    verdict_1
 )
+
 
 
 # -------------------------------------------------
@@ -89,10 +89,9 @@ print(action_2)
 print("\nVerdict:")
 print(verdict_2)
 
-append_audit_record(
-    action_id=action_2["action_id"],
-    agent_id=action_2["agent_id"],
-    verdict=verdict_2
+record_agent_result(
+    action_2,
+    verdict_2
 )
 
 
@@ -116,10 +115,9 @@ print(action_3)
 print("\nVerdict:")
 print(verdict_3)
 
-append_audit_record(
-    action_id=action_3["action_id"],
-    agent_id=action_3["agent_id"],
-    verdict=verdict_3
+record_agent_result(
+    action_3,
+    verdict_3
 )
 # --------------------------------------------------
 # ATTACK SCENARIO 1 - TAMPERED EVIDENCE
@@ -139,10 +137,9 @@ print(tampered_action)
 print("\nVerdict:")
 print(tampered_verdict)
 
-append_audit_record(
-    action_id=tampered_action["action_id"],
-    agent_id=tampered_action["agent_id"],
-    verdict=tampered_verdict
+record_agent_result(
+    tampered_action,
+    tampered_verdict
 )
 
 
@@ -170,10 +167,12 @@ print(replay_verdict_1)
 print("\nSecond submission:")
 print(replay_verdict_2)
 
-append_audit_record(
-    action_id=action_1["action_id"] + "-REPLAY",
-    agent_id=action_1["agent_id"],
-    verdict=replay_verdict_2
+record_agent_result(
+    {
+        **action_1,
+        "action_id": action_1["action_id"] + "-REPLAY"
+    },
+    replay_verdict_2
 )
 
 
@@ -206,10 +205,12 @@ print(allowed_actions)
 print("\nVerdict:")
 print(unauthorized_verdict)
 
-append_audit_record(
-    action_id=unauthorized_action["action_id"] + "-UNAUTHORIZED",
-    agent_id=unauthorized_action["agent_id"],
-    verdict=unauthorized_verdict
+record_agent_result(
+    {
+        **unauthorized_action,
+        "action_id": unauthorized_action["action_id"] + "-UNAUTHORIZED"
+    },
+    unauthorized_verdict
 )
 
 
