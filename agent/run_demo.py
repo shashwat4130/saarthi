@@ -121,3 +121,9 @@ append_audit_record(
 print("\n======================================")
 print("       DEMO COMPLETE")
 print("======================================")
+
+from agent.audit.verify_chain import verify_chain
+
+print("\n===== VERIFYING AUDIT LEDGER =====")
+
+verify_chain()
