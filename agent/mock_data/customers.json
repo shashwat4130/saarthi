@@ -1,0 +1,18 @@
+[
+  {
+    "customer_id": "C101",
+    "name": "Aarav Sharma",
+    "account_status": "ACTIVE",
+    "balance": 10000,
+    "eligible_refund": 10000,
+    "daily_limit": 5000
+  },
+  {
+    "customer_id": "C102",
+    "name": "Riya Verma",
+    "account_status": "ACTIVE",
+    "balance": 25000,
+    "eligible_refund": 3000,
+    "daily_limit": 5000
+  }
+]
