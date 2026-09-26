@@ -1,0 +1,28 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2026-09-26T18:28:58.001399",
+    "action_id": "GENESIS",
+    "agent_id": "SYSTEM",
+    "verdict": {
+      "decision": "GENESIS",
+      "risk": "NONE",
+      "violations": []
+    },
+    "previous_hash": "0",
+    "current_hash": "651119651eee9b16c28c50df8622ba404d7ad7ff57a83703adabe8a8b3719c00"
+  },
+  {
+    "index": 1,
+    "timestamp": "2026-09-26T18:28:58.002732",
+    "action_id": "TEST-ACTION-001",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "ALLOW",
+      "risk": "LOW",
+      "violations": []
+    },
+    "previous_hash": "651119651eee9b16c28c50df8622ba404d7ad7ff57a83703adabe8a8b3719c00",
+    "current_hash": "e29dd4dbaeccac6bef8858aad5aaf29ee69416c7831480e2a18d1c7211fb4e5e"
+  }
+]
