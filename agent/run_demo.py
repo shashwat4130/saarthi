@@ -1,8 +1,13 @@
+
 import importlib.util
+import copy
 
 from agent.agents.refund_agent import create_valid_refund
 from agent.audit.audit_ledger import append_audit_record
 
+from agent.scenarios.attacks.tampered_evidence import detect_tampered_evidence
+from agent.scenarios.attacks.replayed_action import detect_replayed_action
+from agent.scenarios.attacks.unauthorized_action import detect_unauthorized_action
 
 BASE_DIR = __file__.replace("\\run_demo.py", "")
 
@@ -115,6 +120,96 @@ append_audit_record(
     action_id=action_3["action_id"],
     agent_id=action_3["agent_id"],
     verdict=verdict_3
+)
+# --------------------------------------------------
+# ATTACK SCENARIO 1 - TAMPERED EVIDENCE
+# --------------------------------------------------
+
+print("\n===== ATTACK 1: TAMPERED EVIDENCE =====")
+
+tampered_action = copy.deepcopy(action_1)
+
+tampered_action["evidence"]["balance"] = 15000
+
+tampered_verdict = detect_tampered_evidence(tampered_action)
+
+print("Action:")
+print(tampered_action)
+
+print("\nVerdict:")
+print(tampered_verdict)
+
+append_audit_record(
+    action_id=tampered_action["action_id"],
+    agent_id=tampered_action["agent_id"],
+    verdict=tampered_verdict
+)
+
+
+# --------------------------------------------------
+# ATTACK SCENARIO 2 - REPLAYED ACTION
+# --------------------------------------------------
+
+print("\n===== ATTACK 2: REPLAYED ACTION =====")
+
+seen_actions = set()
+
+replay_verdict_1 = detect_replayed_action(
+    action_1,
+    seen_actions
+)
+
+replay_verdict_2 = detect_replayed_action(
+    action_1,
+    seen_actions
+)
+
+print("First submission:")
+print(replay_verdict_1)
+
+print("\nSecond submission:")
+print(replay_verdict_2)
+
+append_audit_record(
+    action_id=action_1["action_id"] + "-REPLAY",
+    agent_id=action_1["agent_id"],
+    verdict=replay_verdict_2
+)
+
+
+# --------------------------------------------------
+# ATTACK SCENARIO 3 - UNAUTHORIZED ACTION
+# --------------------------------------------------
+
+print("\n===== ATTACK 3: UNAUTHORIZED ACTION =====")
+
+unauthorized_action = copy.deepcopy(action_1)
+
+unauthorized_action["action"] = "delete_customer"
+
+allowed_actions = {
+    "issue_refund",
+    "check_balance"
+}
+
+unauthorized_verdict = detect_unauthorized_action(
+    unauthorized_action,
+    allowed_actions
+)
+
+print("Requested action:")
+print(unauthorized_action["action"])
+
+print("\nAllowed actions:")
+print(allowed_actions)
+
+print("\nVerdict:")
+print(unauthorized_verdict)
+
+append_audit_record(
+    action_id=unauthorized_action["action_id"] + "-UNAUTHORIZED",
+    agent_id=unauthorized_action["agent_id"],
+    verdict=unauthorized_verdict
 )
 
 

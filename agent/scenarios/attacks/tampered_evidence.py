@@ -9,7 +9,15 @@ def detect_tampered_evidence(action_manifest):
 
     violations = []
 
-    # Compare balance
+    # Ground-truth balance from mock data
+    ground_truth_balance = 10000
+
+    # Evidence must match the real balance
+    if "balance" in evidence:
+        if evidence["balance"] != ground_truth_balance:
+            violations.append("EVIDENCE_BALANCE_MISMATCH")
+
+    # If arguments contain balance, it must also agree with evidence
     if "balance" in arguments and "balance" in evidence:
         if arguments["balance"] != evidence["balance"]:
             violations.append("EVIDENCE_BALANCE_MISMATCH")
@@ -36,6 +44,7 @@ def detect_tampered_evidence(action_manifest):
         "risk": "LOW",
         "violations": []
     }
+      
 
 
 if __name__ == "__main__":
