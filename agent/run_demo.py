@@ -3,6 +3,7 @@ import importlib.util
 import copy
 
 from agent.agents.refund_agent import create_valid_refund
+from agent.tools.mock_tools import get_account
 from agent.agents.integration import record_agent_result
 
 from agent.scenarios.attacks.tampered_evidence import detect_tampered_evidence
@@ -52,11 +53,37 @@ print("======================================\n")
 # SCENARIO 1 — VALID ACTION
 # -------------------------------------------------
 
-print("===== SCENARIO 1: VALID ACTION =====")
-
 action_1 = create_valid_refund()
 
-verdict_1 = valid_scenario.validate_action(action_1)
+account_1 = get_account(action_1["arguments"]["customer_id"])
+
+print("Account:")
+print(account_1)
+
+if account_1 is None:
+    verdict_1 = {
+        "decision": "REJECT",
+        "risk": "HIGH",
+        "violations": ["ACCOUNT_NOT_FOUND"]
+    }
+
+elif account_1["account_status"] != "ACTIVE":
+    verdict_1 = {
+        "decision": "REJECT",
+        "risk": "HIGH",
+        "violations": ["ACCOUNT_INACTIVE"]
+    }
+
+elif account_1["authorization_status"] != "AUTHORIZED":
+    verdict_1 = {
+        "decision": "REJECT",
+        "risk": "HIGH",
+        "violations": ["ACCOUNT_NOT_AUTHORIZED"]
+    }
+
+else:
+    verdict_1 = valid_scenario.validate_action(action_1)
+
 
 print("Action:")
 print(action_1)
