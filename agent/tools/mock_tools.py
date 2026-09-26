@@ -38,7 +38,19 @@ def get_customer(customer_id):
             return customer
 
     return None
+# ACCOUNT TOOL
+# -----------------------------------------------
 
+def get_account(customer_id):
+    """Return account information for a given customer ID."""
+
+    accounts = load_json(ACCOUNTS_FILE)
+
+    for account in accounts:
+        if account["customer_id"] == customer_id:
+            return account
+
+    return None
 
 # ---------------------------------------------------------
 # BALANCE TOOL

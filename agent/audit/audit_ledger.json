@@ -715,5 +715,97 @@
     },
     "previous_hash": "622fc7d0d7a42e62f2fc52fbfd9fbf354b1bdeec52e75d2e7ce8d35ce82e7fe4",
     "current_hash": "758f040003ecebed1b0803710b8ca51dafdda2331d6b3be6114dd9886cf40db3"
+  },
+  {
+    "index": 47,
+    "timestamp": "2026-09-26T23:01:54.869117",
+    "action_id": "b4f60aac-0aa6-488f-b764-4c21b76867d0",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "ALLOW",
+      "risk": "LOW",
+      "violations": []
+    },
+    "previous_hash": "758f040003ecebed1b0803710b8ca51dafdda2331d6b3be6114dd9886cf40db3",
+    "current_hash": "c2c0398dd144ca52ae039934765d2c10e1d2bddcb04aa7db3738ed1a3680a472"
+  },
+  {
+    "index": 48,
+    "timestamp": "2026-09-26T23:01:54.893657",
+    "action_id": "1f523b1e-e67e-464a-97fc-8035dedcf27c",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "RETRY",
+      "risk": "MEDIUM",
+      "violations": [
+        "BALANCE_CONTRADICTION"
+      ],
+      "ground_truth_balance": 10000,
+      "agent_claimed_balance": 15000
+    },
+    "previous_hash": "c2c0398dd144ca52ae039934765d2c10e1d2bddcb04aa7db3738ed1a3680a472",
+    "current_hash": "a4ca84b73388ca114e306c62cf2f3af5b6c11fb3600b95f7e4298f101675714a"
+  },
+  {
+    "index": 49,
+    "timestamp": "2026-09-26T23:01:54.927029",
+    "action_id": "04d25113-698b-42d7-b3b9-5053d3fc0d70",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "REJECT",
+      "risk": "HIGH",
+      "violations": [
+        "REFUND_EXCEEDS_ELIGIBILITY"
+      ],
+      "eligible_refund": 10000,
+      "requested_amount": 15000
+    },
+    "previous_hash": "a4ca84b73388ca114e306c62cf2f3af5b6c11fb3600b95f7e4298f101675714a",
+    "current_hash": "338080c18413b68a107a35ae7950ebbb8bf345b7e2d58022d551c994a1088ea3"
+  },
+  {
+    "index": 50,
+    "timestamp": "2026-09-26T23:01:54.957474",
+    "action_id": "b4f60aac-0aa6-488f-b764-4c21b76867d0",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "REJECT",
+      "risk": "HIGH",
+      "violations": [
+        "EVIDENCE_BALANCE_MISMATCH"
+      ]
+    },
+    "previous_hash": "338080c18413b68a107a35ae7950ebbb8bf345b7e2d58022d551c994a1088ea3",
+    "current_hash": "2a3ba39ad9ee8fdc7b0aee877c2365e457cb1665d2a94b70f56d60a682daac3f"
+  },
+  {
+    "index": 51,
+    "timestamp": "2026-09-26T23:01:54.990786",
+    "action_id": "b4f60aac-0aa6-488f-b764-4c21b76867d0-REPLAY",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "REJECT",
+      "risk": "HIGH",
+      "violations": [
+        "REPLAYED_ACTION"
+      ]
+    },
+    "previous_hash": "2a3ba39ad9ee8fdc7b0aee877c2365e457cb1665d2a94b70f56d60a682daac3f",
+    "current_hash": "e7d9f2d4e09686494a1a339048f25e3730088ab166ce4c15c71b377222dc0964"
+  },
+  {
+    "index": 52,
+    "timestamp": "2026-09-26T23:01:55.017044",
+    "action_id": "b4f60aac-0aa6-488f-b764-4c21b76867d0-UNAUTHORIZED",
+    "agent_id": "refund-agent-01",
+    "verdict": {
+      "decision": "REJECT",
+      "risk": "HIGH",
+      "violations": [
+        "UNAUTHORIZED_ACTION"
+      ]
+    },
+    "previous_hash": "e7d9f2d4e09686494a1a339048f25e3730088ab166ce4c15c71b377222dc0964",
+    "current_hash": "51528866dfef3f46dff7db87cb50aeef831d2e6e21ebe6bbbc7fef3482eb96cb"
   }
 ]
