@@ -1,0 +1,12 @@
+[
+  {
+    "customer_id": "C101",
+    "account_status": "ACTIVE",
+    "authorization_status": "AUTHORIZED"
+  },
+  {
+    "customer_id": "C102",
+    "account_status": "ACTIVE",
+    "authorization_status": "AUTHORIZED"
+  }
+]
