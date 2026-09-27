@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "rule_id": "REFUND_LIMIT",
+      "action": "refund",
+      "description": "Refunds above the allowed threshold require human review.",
+      "field": "arguments.amount",
+      "operator": "GREATER_THAN",
+      "value": 10000,
+      "severity": 8,
+      "target_decision": "HUMAN_REVIEW"
+    },
+    {
+      "rule_id": "LARGE_TRANSACTION_BLOCK",
+      "action": "refund",
+      "description": "Extremely large refund transactions are blocked.",
+      "field": "arguments.amount",
+      "operator": "GREATER_THAN",
+      "value": 50000,
+      "severity": 10,
+      "target_decision": "BLOCK"
+    },
+    {
+      "rule_id": "SUSPENDED_ACCOUNT",
+      "action": "refund",
+      "description": "Refunds for suspended accounts require human review.",
+      "field": "arguments.account_status",
+      "operator": "EQUALS",
+      "value": "SUSPENDED",
+      "severity": 9,
+      "target_decision": "HUMAN_REVIEW"
+    }
+  ]
+}
