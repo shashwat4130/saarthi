@@ -29,6 +29,16 @@
       "value": "SUSPENDED",
       "severity": 9,
       "target_decision": "HUMAN_REVIEW"
+    },
+    {
+      "rule_id": "DELETE_ACCOUNT_BLOCK",
+      "action": "delete_account",
+      "description": "Account deletion is a destructive action and is blocked by SAARTHI.",
+      "field": "action",
+      "operator": "EQUALS",
+      "value": "delete_account",
+      "severity": 10,
+      "target_decision": "BLOCK"
     }
   ]
 }

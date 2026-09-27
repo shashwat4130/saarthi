@@ -231,3 +231,8 @@ data/*.db-wal
 
 # Environment variables
 .env
+
+# Backend local database
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal
