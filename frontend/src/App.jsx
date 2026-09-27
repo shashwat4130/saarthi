@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Activity,
   ShieldCheck,
@@ -10,6 +10,13 @@ import {
   LockKeyhole,
   ChevronRight,
 } from 'lucide-react'
+
+import {
+  checkHealth,
+  runScenario as runScenarioApi,
+  getAuditEvents,
+  verifyAuditChain,
+} from './services/api'
 
 const scenarios = [
   {
@@ -38,28 +45,120 @@ const scenarios = [
   },
 ]
 
+const decisionConfig = {
+  ALLOW: {
+    icon: ShieldCheck,
+    title: 'ACTION ALLOWED',
+    className:
+      'border-emerald-400/30 bg-emerald-500/10 text-emerald-300',
+  },
+  RETRY: {
+    icon: RefreshCw,
+    title: 'RETRY REQUIRED',
+    className:
+      'border-amber-400/30 bg-amber-500/10 text-amber-300',
+  },
+  HUMAN_REVIEW: {
+    icon: UserCheck,
+    title: 'HUMAN REVIEW',
+    className:
+      'border-blue-400/30 bg-blue-500/10 text-blue-300',
+  },
+  BLOCK: {
+    icon: Ban,
+    title: 'ACTION BLOCKED',
+    className:
+      'border-red-400/30 bg-red-500/10 text-red-300',
+  },
+}
+
 function App() {
   const [selectedScenario, setSelectedScenario] = useState(null)
+  const [verdict, setVerdict] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [backendOnline, setBackendOnline] = useState(false)
+  const [auditValid, setAuditValid] = useState(false)
+  const [auditEvents, setAuditEvents] = useState([])
+  const [error, setError] = useState('')
 
-  const runScenario = (scenario) => {
-    setSelectedScenario({
-      ...scenario,
-      loading: true,
-    })
+  const refreshAudit = async () => {
+    try {
+      const [events, chain] = await Promise.all([
+        getAuditEvents(20),
+        verifyAuditChain(),
+      ])
 
-    // Backend connection will be added next.
-    setTimeout(() => {
-      setSelectedScenario({
-        ...scenario,
-        loading: false,
-      })
-    }, 500)
+      setAuditEvents(Array.isArray(events) ? events : [])
+      setAuditValid(Boolean(chain?.valid))
+    } catch (err) {
+      console.error('Audit refresh failed:', err)
+    }
   }
+
+  const runScenario = async (scenario) => {
+    setSelectedScenario(scenario)
+    setLoading(true)
+    setVerdict(null)
+    setError('')
+
+    try {
+      const result = await runScenarioApi(scenario.id)
+
+      /*
+       * Demo endpoint returns:
+       *
+       * {
+       *   action: {...},
+       *   verdict: {...}
+       * }
+       *
+       * The dashboard needs the nested governance verdict.
+       */
+      const governanceVerdict = result?.verdict || result
+
+      setVerdict(governanceVerdict)
+
+      await refreshAudit()
+    } catch (err) {
+      console.error('Scenario failed:', err)
+
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          'Unable to connect to SAARTHI backend.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const initializeBackend = async () => {
+      try {
+        await checkHealth()
+        setBackendOnline(true)
+        await refreshAudit()
+      } catch (err) {
+        console.error('Backend unavailable:', err)
+        setBackendOnline(false)
+      }
+    }
+
+    initializeBackend()
+
+    const interval = setInterval(refreshAudit, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const decision = verdict?.decision
+  const config = decision ? decisionConfig[decision] : null
+  const DecisionIcon = config?.icon
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100">
 
-      {/* Background glow */}
+      {/* Background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
         <div className="absolute -right-40 top-20 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
@@ -88,15 +187,32 @@ function App() {
 
           </div>
 
-          <div className="flex items-center gap-3 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-4 py-2">
+          <div
+            className={`flex items-center gap-3 rounded-full border px-4 py-2 ${
+              backendOnline
+                ? 'border-emerald-400/20 bg-emerald-400/5'
+                : 'border-red-400/20 bg-red-400/5'
+            }`}
+          >
 
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            </span>
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                backendOnline
+                  ? 'bg-emerald-400'
+                  : 'bg-red-400'
+              }`}
+            />
 
-            <span className="text-sm font-medium text-emerald-300">
-              Runtime Active
+            <span
+              className={`text-sm font-medium ${
+                backendOnline
+                  ? 'text-emerald-300'
+                  : 'text-red-300'
+              }`}
+            >
+              {backendOnline
+                ? 'Runtime Active'
+                : 'Backend Offline'}
             </span>
 
           </div>
@@ -109,8 +225,16 @@ function App() {
           <StatusCard
             icon={Activity}
             title="Governance Runtime"
-            value="Operational"
-            status="Online"
+            value={
+              backendOnline
+                ? 'Operational'
+                : 'Offline'
+            }
+            status={
+              backendOnline
+                ? 'Online'
+                : 'Offline'
+            }
           />
 
           <StatusCard
@@ -123,13 +247,21 @@ function App() {
           <StatusCard
             icon={LockKeyhole}
             title="Audit Integrity"
-            value="Chain Verified"
-            status="Secure"
+            value={
+              auditValid
+                ? 'Chain Verified'
+                : 'Checking...'
+            }
+            status={
+              auditValid
+                ? 'Secure'
+                : 'Pending'
+            }
           />
 
         </section>
 
-        {/* MAIN GRID */}
+        {/* MAIN DASHBOARD */}
         <div className="grid gap-6 lg:grid-cols-[1fr_1.35fr]">
 
           {/* SCENARIOS */}
@@ -156,16 +288,22 @@ function App() {
               {scenarios.map((scenario) => {
 
                 const Icon = scenario.icon
-                const active = selectedScenario?.id === scenario.id
+                const active =
+                  selectedScenario?.id === scenario.id
 
                 return (
                   <button
                     key={scenario.id}
                     onClick={() => runScenario(scenario)}
+                    disabled={loading}
                     className={`group flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-all duration-200 ${
                       active
                         ? 'border-indigo-400/40 bg-indigo-500/10'
                         : 'border-white/10 bg-white/[0.02] hover:border-indigo-400/30 hover:bg-indigo-500/[0.06]'
+                    } ${
+                      loading
+                        ? 'cursor-wait opacity-70'
+                        : ''
                     }`}
                   >
 
@@ -196,7 +334,7 @@ function App() {
             <div className="mt-5 rounded-xl border border-white/5 bg-black/10 p-4">
 
               <p className="text-xs leading-5 text-slate-500">
-                Each scenario will pass through verification, policy
+                Each scenario passes through verification, policy
                 evaluation, risk scoring and the final decision gate.
               </p>
 
@@ -204,7 +342,7 @@ function App() {
 
           </section>
 
-          {/* GOVERNANCE DECISION */}
+          {/* DECISION */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 shadow-2xl shadow-black/20">
 
             <div className="mb-5">
@@ -221,112 +359,233 @@ function App() {
 
             {!selectedScenario ? (
 
-              <div className="flex min-h-[390px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 text-center">
+              <EmptyState />
 
-                <ShieldAlert className="mb-4 h-10 w-10 text-slate-600" />
+            ) : loading ? (
 
-                <h3 className="font-medium text-slate-300">
-                  No action evaluated
-                </h3>
+              <div className="flex min-h-[390px] items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10">
 
-                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                  Select a scenario from the left to send an agent action
-                  through SAARTHI.
-                </p>
+                <div className="text-center">
+
+                  <RefreshCw className="mx-auto h-9 w-9 animate-spin text-indigo-400" />
+
+                  <p className="mt-4 font-medium text-slate-300">
+                    Running governance pipeline
+                  </p>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    Verifying evidence, policies and risk...
+                  </p>
+
+                </div>
 
               </div>
 
-            ) : (
+            ) : error ? (
 
-              <div className="space-y-5">
+              <div className="flex min-h-[390px] items-center justify-center rounded-xl border border-red-400/20 bg-red-500/5 p-8 text-center">
 
-                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] p-5">
+                <div>
 
-                  <div className="flex items-center justify-between">
+                  <Ban className="mx-auto h-10 w-10 text-red-400" />
+
+                  <h3 className="mt-4 font-semibold text-red-300">
+                    Backend Request Failed
+                  </h3>
+
+                  <p className="mt-2 text-sm text-slate-400">
+                    {error}
+                  </p>
+
+                </div>
+
+              </div>
+
+            ) : verdict ? (
+
+              <div className="space-y-4">
+
+                {/* FINAL DECISION */}
+                <div
+                  className={`rounded-2xl border p-6 ${
+                    config?.className ||
+                    'border-white/10 bg-white/5 text-slate-200'
+                  }`}
+                >
+
+                  <div className="flex items-center gap-4">
+
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-black/20">
+
+                      {DecisionIcon && (
+                        <DecisionIcon className="h-7 w-7" />
+                      )}
+
+                    </div>
 
                     <div>
 
-                      <p className="text-xs uppercase tracking-wider text-slate-500">
-                        Selected Scenario
+                      <p className="text-xs uppercase tracking-[0.2em] opacity-70">
+                        Final Decision
                       </p>
 
-                      <p className="mt-1 text-lg font-semibold">
-                        {selectedScenario.label}
+                      <p className="mt-1 text-2xl font-bold">
+                        {decision || 'UNKNOWN'}
+                      </p>
+
+                      <p className="mt-1 text-sm opacity-80">
+                        {config?.title || 'Governance Result'}
                       </p>
 
                     </div>
 
-                    <Activity className="h-5 w-5 text-indigo-400" />
+                  </div>
+
+                  <div className="mt-5 border-t border-current/10 pt-4">
+
+                    <p className="text-sm leading-6 opacity-90">
+                      {safeText(verdict.reason)}
+                    </p>
 
                   </div>
 
                 </div>
 
-                {selectedScenario.loading ? (
+                {/* METRICS */}
+                <div className="grid gap-3 sm:grid-cols-3">
 
-                  <div className="flex min-h-[260px] items-center justify-center">
+                  <MetricCard
+                    title="Verification"
+                    value={safeText(
+                      verdict.verification?.status,
+                    )}
+                    subtext={
+                      verdict.verification?.verified
+                        ? 'Verified'
+                        : 'Mismatch detected'
+                    }
+                  />
 
-                    <div className="text-center">
+                  <MetricCard
+                    title="Risk Score"
+                    value={
+                      verdict.risk?.total_score !== undefined
+                        ? String(
+                            verdict.risk.total_score,
+                          )
+                        : '—'
+                    }
+                    subtext={safeText(
+                      verdict.risk?.risk_level,
+                      'Risk assessment',
+                    )}
+                  />
 
-                      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-indigo-400" />
+                  <MetricCard
+                    title="Policy"
+                    value={safeText(
+                      verdict.policy?.decision,
+                    )}
+                    subtext={
+                      Array.isArray(
+                        verdict.policy?.triggered_rules,
+                      )
+                        ? `${verdict.policy.triggered_rules.length} rule(s) triggered`
+                        : 'Policy evaluated'
+                    }
+                  />
 
-                      <p className="mt-4 text-sm text-slate-400">
-                        Running governance pipeline...
-                      </p>
+                </div>
+
+                {/* ACTION DETAILS */}
+                <div className="rounded-xl border border-white/10 bg-black/10 p-5">
+
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                    Action Details
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+
+                    <Detail
+                      label="Action"
+                      value={verdict.action}
+                    />
+
+                    <Detail
+                      label="Agent"
+                      value={verdict.agent_id}
+                    />
+
+                    <Detail
+                      label="Action ID"
+                      value={verdict.action_id}
+                    />
+
+                    <Detail
+                      label="Audit Event"
+                      value={verdict.audit_event_id}
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* VERIFICATION DETAILS */}
+                {verdict.verification && (
+                  <div className="rounded-xl border border-white/10 bg-black/10 p-5">
+
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                      Verification Details
+                    </p>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+
+                      <Detail
+                        label="Status"
+                        value={
+                          verdict.verification.status
+                        }
+                      />
+
+                      <Detail
+                        label="Verified"
+                        value={
+                          verdict.verification.verified
+                            ? 'YES'
+                            : 'NO'
+                        }
+                      />
+
+                      <Detail
+                        label="Checked Fields"
+                        value={
+                          verdict.verification
+                            .checked_fields
+                        }
+                      />
+
+                      <Detail
+                        label="Discrepancies"
+                        value={
+                          verdict.verification
+                            .discrepancies
+                        }
+                      />
 
                     </div>
 
                   </div>
-
-                ) : (
-
-                  <>
-
-                    <div className="rounded-xl border border-white/10 bg-black/10 p-6 text-center">
-
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Awaiting Backend Verdict
-                      </p>
-
-                      <p className="mt-3 text-sm text-slate-500">
-                        Backend integration will populate the real
-                        verification, policy, risk and decision data.
-                      </p>
-
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-
-                      <MetricCard
-                        title="Verification"
-                        value="—"
-                      />
-
-                      <MetricCard
-                        title="Policy"
-                        value="—"
-                      />
-
-                      <MetricCard
-                        title="Risk"
-                        value="— / 100"
-                      />
-
-                    </div>
-
-                  </>
-
                 )}
 
               </div>
 
-            )}
+            ) : null}
 
           </section>
 
         </div>
 
-        {/* PIPELINE */}
+        {/* GOVERNANCE PIPELINE */}
         <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
 
           <div className="mb-5">
@@ -376,7 +635,7 @@ function App() {
 
         </section>
 
-        {/* AUDIT */}
+        {/* AUDIT TIMELINE */}
         <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -393,27 +652,85 @@ function App() {
 
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-emerald-400">
+            <div className="flex items-center gap-2 text-xs">
 
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  auditValid
+                    ? 'bg-emerald-400'
+                    : 'bg-amber-400'
+                }`}
+              />
 
-              Chain integrity verified
+              <span
+                className={
+                  auditValid
+                    ? 'text-emerald-400'
+                    : 'text-amber-400'
+                }
+              >
+                {auditValid
+                  ? 'Chain integrity verified'
+                  : 'Checking chain'}
+              </span>
 
             </div>
 
           </div>
 
-          <div className="mt-5 rounded-xl border border-dashed border-white/10 p-8 text-center">
+          {auditEvents.length === 0 ? (
 
-            <p className="text-sm text-slate-500">
-              Audit events will appear here after backend integration.
-            </p>
+            <div className="mt-5 rounded-xl border border-dashed border-white/10 p-8 text-center">
 
-          </div>
+              <p className="text-sm text-slate-500">
+                No audit events yet.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="mt-5 space-y-2">
+
+              {auditEvents.slice(0, 8).map((event) => (
+
+                <div
+                  key={event.event_id}
+                  className="flex items-center gap-4 rounded-xl border border-white/5 bg-black/10 p-4"
+                >
+
+                  <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-indigo-400" />
+
+                  <div className="min-w-0 flex-1">
+
+                    <p className="font-medium">
+                      {safeText(event.action)}
+                    </p>
+
+                    <p className="truncate text-xs text-slate-500">
+                      {safeText(event.event_id)}
+                    </p>
+
+                  </div>
+
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs">
+                    {safeText(event.decision)}
+                  </span>
+
+                  <span className="hidden text-xs text-slate-500 sm:block">
+                    Risk {safeText(event.risk_score)}
+                  </span>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          )}
 
         </section>
 
-        {/* FOOTER */}
         <footer className="py-8 text-center text-xs text-slate-600">
           SAARTHI • Runtime Governance for Autonomous AI
         </footer>
@@ -423,7 +740,32 @@ function App() {
   )
 }
 
-function StatusCard({ icon: Icon, title, value, status }) {
+/* ==================================================
+   HELPERS
+================================================== */
+
+function safeText(value, fallback = '—') {
+  if (value === null || value === undefined) {
+    return fallback
+  }
+
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return '[Object]'
+    }
+  }
+
+  return String(value)
+}
+
+function StatusCard({
+  icon: Icon,
+  title,
+  value,
+  status,
+}) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
 
@@ -440,13 +782,13 @@ function StatusCard({ icon: Icon, title, value, status }) {
           </p>
 
           <p className="mt-1 font-medium">
-            {value}
+            {safeText(value)}
           </p>
 
         </div>
 
         <span className="ml-auto rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-          {status}
+          {safeText(status)}
         </span>
 
       </div>
@@ -455,7 +797,11 @@ function StatusCard({ icon: Icon, title, value, status }) {
   )
 }
 
-function MetricCard({ title, value }) {
+function MetricCard({
+  title,
+  value,
+  subtext,
+}) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/10 p-4">
 
@@ -463,8 +809,50 @@ function MetricCard({ title, value }) {
         {title}
       </p>
 
-      <p className="mt-2 font-semibold text-slate-300">
-        {value}
+      <p className="mt-2 text-lg font-semibold text-slate-200">
+        {safeText(value)}
+      </p>
+
+      <p className="mt-1 text-xs text-slate-500">
+        {safeText(subtext)}
+      </p>
+
+    </div>
+  )
+}
+
+function Detail({
+  label,
+  value,
+}) {
+  return (
+    <div>
+
+      <p className="text-xs uppercase tracking-wider text-slate-600">
+        {label}
+      </p>
+
+      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-slate-300">
+        {safeText(value)}
+      </pre>
+
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="flex min-h-[390px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 text-center">
+
+      <ShieldAlert className="mb-4 h-10 w-10 text-slate-600" />
+
+      <h3 className="font-medium text-slate-300">
+        No action evaluated
+      </h3>
+
+      <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+        Select a scenario from the left to send an agent
+        action through SAARTHI.
       </p>
 
     </div>
